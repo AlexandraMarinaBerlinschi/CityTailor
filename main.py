@@ -4,12 +4,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from models import Preference
+from init_db import init_db  # 👈 importat pentru ruta /init-db
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000"],  # modifică dacă frontend-ul e hostat în altă parte
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -19,13 +20,17 @@ app.add_middleware(
 def home():
     return {"message": "CityTailor backend is running!"}
 
+@app.get("/init-db")  # 👈 endpoint temporar pentru a crea tabelele
+async def initialize_db():
+    await init_db()
+    return {"status": "Database initialized"}
+
 @app.post("/submit-preferences")
 async def submit_preferences(request: Request, db: AsyncSession = Depends(get_db)):
     data = await request.json()
     activities = data.get("activities", [])
     time = data.get("time", "")
 
-    # Salvare în baza de date
     new_pref = Preference(
         activities=", ".join(activities),
         time=time
@@ -33,7 +38,6 @@ async def submit_preferences(request: Request, db: AsyncSession = Depends(get_db
     db.add(new_pref)
     await db.commit()
 
-    # Recomandări generate
     all_recommendations = {
         "Cultural": ["Visit the local art museum", "Attend a history tour"],
         "Outdoor": ["Explore a nature park", "Go hiking in nearby hills"],
